@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+data/
+log/
+connectivity/
+connectivity
+tmp/
+tmp1.py
+tmp2.py
+temp/
+tests/
+temp.py
+*.lprof
