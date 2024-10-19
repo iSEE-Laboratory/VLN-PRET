@@ -43,10 +43,11 @@ Finally, the directory layout should looks like:
 │   └── v1
 ├── log
 │   └── commit
+├── src
+├── .gitignore
 ├── pretrain.sh
 ├── README.md
-├── run.sh
-└── src
+└── run.sh
 ```
 
 ## Train
@@ -55,10 +56,20 @@ Pretrain:
 sh pretrain.sh R2R
 # sh pretrain.sh RxR
 ```
-Note that even though multi-process training is implemented, I never use it. Therefore, there may be some bugs.
 
 Fine-tune:
 ```bash
 sh run.sh R2R
 # sh run.sh RxR
+```
+
+
+## Citation
+```
+@article{lu2024pret,
+  title={PRET: Planning with Directed Fidelity Trajectory for Vision and Language Navigation},
+  author={Lu, Renjie and Meng, Jingke and Zheng, Wei-Shi},
+  journal={arXiv preprint arXiv:2407.11487},
+  year={2024}
+}
 ```

@@ -14,10 +14,10 @@ from .trainer_base import TrainerBase
 
 
 class TrainerTFSF(TrainerBase):
-    def __init__(self, datasets, agent, optimizer, lr_scheduler, main_metric='SPL'):
+    def __init__(self, datasets, agent, main_metric='SPL'):
         assert main_metric in ('SPL', 'sDTW')
 
-        super().__init__(datasets['train'], None, agent, optimizer, lr_scheduler)
+        super().__init__(datasets['train'], None, agent)
         self.main_metric = main_metric
         self.datasets = datasets
 
@@ -43,21 +43,14 @@ class TrainerTFSF(TrainerBase):
         loaders = [train_loader] if aug_loader is None else [train_loader, aug_loader]
         for i in range(n // len(loaders)):
             for loader in loaders:
-                try:
-                    batch, env = next(loader)
-                    loss, loss_log_temp = self.agent(batch, env)
-                    self._optimize(loss)
-                    loss_dict = loss_dict + loss_log_temp
-                    if self.rank == 0:
-                        print_progress(postfix=(loss_dict/(i+1)).round(2).to_dict())
-                except RuntimeError as e:
-                    if "out of memory" in str(e):
-                        self.optimizer.zero_grad()
-                        torch.cuda.empty_cache()
-                        print('======SKIP======')
-                        continue
-                    else:
-                        raise
+                batch, env = next(loader)
+                loss, loss_log_temp = self.agent(batch, env)
+                self._optimize(loss)
+
+                loss_dict = loss_dict + loss_log_temp
+                if self.rank == 0:
+                    print_progress(postfix=(loss_dict/(i+1)).round(2).to_dict())
+
         self.lr_scheduler.step()
         return (loss_dict/(i+1)).to_dict()  # average loss of this epoch
 
@@ -225,7 +218,7 @@ class TrainerTFSF(TrainerBase):
             batch_result = []
             for i in range(batch_size):
                 instr_id = batch.at[i, 'instruction_id']
-                if isinstance(instr_id, np.int64):  # 原本是numpy.int64的类型
+                if isinstance(instr_id, np.int64):
                     instr_id = int(instr_id)
                 result = {
                     'instr_id': instr_id,

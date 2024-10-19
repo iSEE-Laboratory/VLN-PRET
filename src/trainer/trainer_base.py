@@ -13,14 +13,14 @@ import utils
 
 
 class TrainerBase:
-    def __init__(self, train_set, validate_set, agent, optimizer, lr_scheduler):
+    def __init__(self, train_set, validate_set, agent):
         self.train_set = train_set
         self.validate_set = validate_set
         self.train_set_size = len(train_set)
 
         self.agent = agent
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
+        self.optimizer = None
+        self.lr_scheduler = None
 
         self.log_dir = None
         self.writer = None
@@ -45,14 +45,29 @@ class TrainerBase:
             self.logger = utils.Logger(log_dir)
     
     def set_distributed(self, rank, world_size):
+        assert self.optimizer is None, 'You must set distributed before set optimizer'
+
         self.distributed = True
         self.rank = rank
         self.world_size = world_size
 
-        torch.cuda.set_device(rank)
         dist.init_process_group("nccl", init_method=None, world_size=world_size, rank=rank)
         self.agent = DDP(self.agent, device_ids=[rank], find_unused_parameters=True)
         print(f'RANK {self.rank}: Setup distributed training.')
+
+    def set_optimizer(self, optimizer_cls, **kwargs):
+        """
+        Args:
+            optmizer_cls: for example, torch.optim.SGD
+            kwargs: arguments of optimizer
+        """
+        assert self.optimizer is None, 'Optmizer is already set.'
+
+        self.optimizer = optimizer_cls(self.agent.parameters(), **kwargs)
+
+    def set_lrscheduler(self, max_step, warmup_ratio, fn):
+        assert self.optimizer is not None
+        self.lr_scheduler = utils.LRScheduler(self.optimizer, max_step, warmup_ratio, fn)
 
     def _optimize(self, loss):
         self.optimizer.zero_grad()

@@ -13,10 +13,10 @@ from .trainer_base import TrainerBase
 
 
 class TrainerPretrain(TrainerBase):
-    def __init__(self, datasets, agent, optimizer, lr_scheduler, tasks):
+    def __init__(self, datasets, agent, tasks):
         assert 'MLM' in tasks  # at least one pretraining task.
 
-        super().__init__(datasets['MLM']['train'], None, agent, optimizer, lr_scheduler)
+        super().__init__(datasets['MLM']['train'], None, agent)
         self.tasks = tasks
         self.datasets = datasets
 
@@ -31,11 +31,6 @@ class TrainerPretrain(TrainerBase):
             dataset = self.datasets['ITM'][split]
             sampler = DistributedSampler(dataset) if self.distributed else RandomSampler(dataset)
             dataloaders['ITM'] = DataLoader(dataset, batch_size, sampler=sampler, num_workers=4, collate_fn=collate_fn_ITM)
-
-        if 'SAP' in self.tasks or 'SAR' in self.tasks:
-            dataset = self.datasets['SAP_SAR'][split]
-            sampler = DistributedSampler(dataset) if self.distributed else RandomSampler(dataset)
-            dataloaders['SAP_SAR'] = DataLoader(dataset, batch_size, sampler=sampler, num_workers=4, collate_fn=collate_fn_SAP_SAR)
 
         dataloader = EndlessDataLoader(dataloaders)
         return dataloader
@@ -76,7 +71,7 @@ class TrainerPretrain(TrainerBase):
     def train(self, batch_size, iteration_num, log_every, evaluate_first):
         if self.distributed:
             dist.barrier()
-        
+
         epoch_num = iteration_num / math.ceil(self.train_set_size // (batch_size * self.world_size))
         print(f'Start training {iteration_num} iteration({epoch_num:.2f} epoch).')
 

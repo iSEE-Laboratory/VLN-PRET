@@ -57,32 +57,31 @@ def main(rank, world_size, args):
     if args.load:
         print('Loading model from', args.load)
         agent.load(args.load, strict=not args.not_load_strict)
-
-    # create optimizer
-    if args.optimizer == 'AdamW':
-        optimizer = optim.AdamW(agent.parameters(), lr=args.lr, weight_decay=0.0)
-
-    # create scheduler
-    scheduler = utils.LRScheduler(
-        optimizer,
-        max_step=args.iteration_num // args.log_every,
-        warmup_ratio=args.warmup_ratio,
-        fn=args.lr_scheduler)
+    agent = agent.to('cuda' if torch.cuda.is_available() else 'cpu')
 
     # create Trainer, use different trainer to support different task
     if args.trainer == 'TF_SF':
         assert args.dataset in {'R2R', 'RxR'}
         main_metric = {'R2R': 'SPL', 'RxR': 'sDTW'}[args.dataset]
-        trainer = TrainerTFSF(datasets, agent, optimizer, scheduler, main_metric)
+        trainer = TrainerTFSF(datasets, agent, main_metric)
     elif args.trainer == 'Pretrain':
         assert args.dataset in {'R2RPretrain', 'RxRPretrain'}
-        trainer = TrainerPretrain(datasets, agent, optimizer, scheduler, args.tasks)
+        trainer = TrainerPretrain(datasets, agent, args.tasks)
 
     if args.use_amp:
         trainer.set_use_amp()
 
     if world_size > 1:
+        # annotate roberta.encoder.gradient_checkpointing = True in src/model/PRET.py
+        # if use DDP
         trainer.set_distributed(rank, world_size)
+
+    # set optimizer
+    trainer.set_optimizer(optim.AdamW, lr=args.lr, weight_decay=0.0)
+    trainer.set_lrscheduler(
+        max_step=args.iteration_num // args.log_every,
+        warmup_ratio=args.warmup_ratio,
+        fn=args.lr_scheduler)
 
     if args.log and rank == 0:
         time = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')

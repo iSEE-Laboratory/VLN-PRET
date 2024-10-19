@@ -6,7 +6,7 @@ if [ $1 = "R2R" ]; then
     echo "Pretrain on R2R."
     python src/main.py --log \
         --method $method \
-        --description 'pretrain,R2R,MLM,CLIP,KV' \
+        --description 'pretrain,R2R,MLM,CLIP' \
         --mask_visited \
         --use_panorama \
         --use_directed \
@@ -14,9 +14,9 @@ if [ $1 = "R2R" ]; then
         --MAM_layer_num 4 \
         --CCM_layer_num 1 \
         --text_backbone 'ALBEF' \
-        --gpu '3' \
+        --gpu '0' \
         --dataset 'R2RPretrain' \
-        --model 'PRET_KV' \
+        --model 'PRET' \
         --agent 'AgentPretrain' \
         --trainer 'Pretrain' \
         --tasks MLM \
